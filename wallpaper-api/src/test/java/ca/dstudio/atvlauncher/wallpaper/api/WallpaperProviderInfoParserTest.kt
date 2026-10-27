@@ -121,6 +121,32 @@ class WallpaperProviderInfoParserTest {
     }
 
     @Test
+    fun `event flags are the FLAG_EVENT_ constants`() {
+        assertEquals(setOf(WallpaperContract.EVENT_FOCUSED_TILE), parse("wallpaperEvents" to "${WallpaperProviderInfo.FLAG_EVENT_FOCUSED_TILE}").events)
+        assertEquals(setOf(WallpaperContract.EVENT_NOW_PLAYING), parse("wallpaperEvents" to "${WallpaperProviderInfo.FLAG_EVENT_NOW_PLAYING}").events)
+        assertEquals(setOf(WallpaperContract.EVENT_HOME_MOVING), parse("wallpaperEvents" to "${WallpaperProviderInfo.FLAG_EVENT_HOME_MOVING}").events)
+        assertEquals(
+            setOf(WallpaperContract.EVENT_FOCUSED_TILE, WallpaperContract.EVENT_HOME_MOVING),
+            parse("wallpaperEvents" to "focusedTile|homeMoving").events,
+        )
+    }
+
+    /** As aapt2 compiles the sample's Colour Fields Live: `surface` to 1, the label a reference. */
+    @Test
+    fun `a surface plugin's info`() {
+        val info = parse(
+            "wallpaperLabel" to "@2131886081",
+            "wallpaperKind" to "1",
+            "wallpaperEvents" to "0x3",
+            "apiVersion" to "2",
+        )
+        assertEquals(KIND_SURFACE, info.kind)
+        assertEquals(setOf(WallpaperContract.EVENT_FOCUSED_TILE, WallpaperContract.EVENT_NOW_PLAYING), info.events)
+        assertEquals(WallpaperContract.API_VERSION, info.apiVersion)
+        assertEquals(0L, info.refreshIntervalMs)
+    }
+
+    @Test
     fun `refresh interval is raised to the minimum, zero and below mean never`() {
         assertEquals(21_600_000L, parse("refreshIntervalMs" to "21600000").refreshIntervalMs)
         assertEquals(21_600_000L, parse("refreshIntervalMs" to "0x1499700").refreshIntervalMs)

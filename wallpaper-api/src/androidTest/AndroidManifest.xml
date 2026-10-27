@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The plugins WallpaperProviderServiceDeviceTest drives, in the test APK's own process. -->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <application>
+        <service
+            android:name="ca.dstudio.atvlauncher.wallpaper.api.SurfaceRecordingService"
+            android:exported="false">
+            <meta-data
+                android:name="ca.dstudio.atvlauncher.wallpaper.INFO"
+                android:resource="@xml/recording_surface_info" />
+        </service>
+
+        <service
+            android:name="ca.dstudio.atvlauncher.wallpaper.api.ItemsRecordingService"
+            android:exported="false">
+            <meta-data
+                android:name="ca.dstudio.atvlauncher.wallpaper.INFO"
+                android:resource="@xml/recording_items_info" />
+        </service>
+    </application>
+
+</manifest>

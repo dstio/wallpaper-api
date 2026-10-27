@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Colour Fields Live: the surface kind. Never asked for pictures, so no types and no interval. It declares
+     the events so a debug build can ask for them (Ask for events): the launcher sends a plugin of another
+     package none. -->
+<wallpaper-provider
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    app:wallpaperLabel="@string/live_name"
+    app:wallpaperDescription="@string/live_description"
+    app:wallpaperSettings="ca.dstudio.atvlauncher.wallpaper.sample.colourfields.LiveSettingsActivity"
+    app:wallpaperPreview="@drawable/wallpaper_preview"
+    app:wallpaperKind="surface"
+    app:wallpaperEvents="focusedTile|nowPlaying"
+    app:apiVersion="2" />

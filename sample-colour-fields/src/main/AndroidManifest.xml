@@ -32,6 +32,23 @@
             android:authorities="${applicationId}.wallpapers"
             android:exported="true"
             android:readPermission="ca.dstudio.atvlauncher.permission.BIND_WALLPAPER" />
+
+        <!-- Colour Fields Live: the surface kind, its own info file and settings. -->
+        <activity
+            android:name=".LiveSettingsActivity"
+            android:exported="true" />
+
+        <service
+            android:name=".ColourFieldsLiveService"
+            android:exported="true"
+            android:permission="ca.dstudio.atvlauncher.permission.BIND_WALLPAPER">
+            <intent-filter>
+                <action android:name="ca.dstudio.atvlauncher.wallpaper.SERVICE" />
+            </intent-filter>
+            <meta-data
+                android:name="ca.dstudio.atvlauncher.wallpaper.INFO"
+                android:resource="@xml/wallpaper_info_live" />
+        </service>
     </application>
 
 </manifest>

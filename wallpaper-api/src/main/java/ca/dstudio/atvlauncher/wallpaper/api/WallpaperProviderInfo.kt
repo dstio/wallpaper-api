@@ -32,7 +32,11 @@ data class WallpaperProviderInfo(
     val kind: Int = KIND_ITEMS,
     /** The item types the plugin sends, as [FLAG_IMAGE] | [FLAG_COLOR] | [FLAG_VIDEO]. */
     val types: Int = DEFAULT_TYPES,
-    /** The events the plugin asks to hear: [WallpaperContract.EVENT_FOCUSED_TILE], [WallpaperContract.EVENT_NOW_PLAYING]. */
+    /**
+     * The events the plugin may ask to hear: [WallpaperContract.EVENT_FOCUSED_TILE],
+     * [WallpaperContract.EVENT_NOW_PLAYING], [WallpaperContract.EVENT_HOME_MOVING]. It asks for those it needs now
+     * with `wantEvents` ([FLAG_EVENT_FOCUSED_TILE], [FLAG_EVENT_NOW_PLAYING], [FLAG_EVENT_HOME_MOVING]).
+     */
     val events: Set<String> = emptySet(),
     /**
      * The **first** interval at which the launcher asks again, in milliseconds; the plugin changes it
@@ -51,10 +55,13 @@ data class WallpaperProviderInfo(
     fun declaresType(type: Int): Boolean = type in 0 until Int.SIZE_BITS - 1 && types and (1 shl type) != 0
 
     companion object {
-        /** [kind]: the plugin hands items, the launcher draws them. The only kind 2.0 serves. */
+        /** [kind]: the plugin hands items, the launcher draws them. Served from 2.0. */
         const val KIND_ITEMS = 0
 
-        /** [kind]: the plugin draws into a surface the launcher hands it. Served from a later version. */
+        /**
+         * [kind]: the plugin draws into a surface the launcher lends it ([IWallpaperProvider.attachSurface]).
+         * Served from 2.1; `apiVersion` stays 2, since the kind is the declaration.
+         */
         const val KIND_SURFACE = 1
 
         /** [types] flag for [WallpaperContract.TYPE_IMAGE]; `image` in wallpaper_info.xml. */
@@ -65,6 +72,24 @@ data class WallpaperProviderInfo(
 
         /** [types] flag for [WallpaperContract.TYPE_VIDEO]; `video` in wallpaper_info.xml. */
         const val FLAG_VIDEO = 1 shl WallpaperContract.TYPE_VIDEO
+
+        /**
+         * The flag for [WallpaperContract.EVENT_FOCUSED_TILE]: `focusedTile` in wallpaper_info.xml's
+         * `wallpaperEvents`, and in `wantEvents(flags)`.
+         */
+        const val FLAG_EVENT_FOCUSED_TILE = 1
+
+        /**
+         * The flag for [WallpaperContract.EVENT_NOW_PLAYING]: `nowPlaying` in wallpaper_info.xml's
+         * `wallpaperEvents`, and in `wantEvents(flags)`.
+         */
+        const val FLAG_EVENT_NOW_PLAYING = 2
+
+        /**
+         * The flag for [WallpaperContract.EVENT_HOME_MOVING]: `homeMoving` in wallpaper_info.xml's
+         * `wallpaperEvents`, and in `wantEvents(flags)`. From 2.1.
+         */
+        const val FLAG_EVENT_HOME_MOVING = 4
 
         /** [types] when wallpaper_info.xml says nothing: pictures. */
         const val DEFAULT_TYPES = FLAG_IMAGE
@@ -194,8 +219,9 @@ data class WallpaperProviderInfo(
             private val TYPE_FLAGS = mapOf("image" to FLAG_IMAGE, "color" to FLAG_COLOR, "video" to FLAG_VIDEO)
             private const val ALL_TYPE_FLAGS = FLAG_IMAGE or FLAG_COLOR or FLAG_VIDEO
             private val EVENT_FLAGS = mapOf(
-                WallpaperContract.EVENT_FOCUSED_TILE to 1,
-                WallpaperContract.EVENT_NOW_PLAYING to 2,
+                WallpaperContract.EVENT_FOCUSED_TILE to FLAG_EVENT_FOCUSED_TILE,
+                WallpaperContract.EVENT_NOW_PLAYING to FLAG_EVENT_NOW_PLAYING,
+                WallpaperContract.EVENT_HOME_MOVING to FLAG_EVENT_HOME_MOVING,
             )
         }
     }

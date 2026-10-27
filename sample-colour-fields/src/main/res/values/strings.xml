@@ -19,4 +19,16 @@
     <string name="settings_silent">Do not answer</string>
 
     <string name="colour_title">Deep blue</string>
+
+    <!-- Colour Fields Live: the surface kind. -->
+    <string name="live_name">Colour Fields Live</string>
+    <string name="live_description">A gradient that turns slowly, drawn on this device</string>
+    <string name="live_settings_note">Nothing to choose here. Debug builds add switches that test the launcher\'s surface host.</string>
+
+    <!-- Debug builds only: what the launcher's surface host is checked against. -->
+    <string name="live_never_draw">Never draw</string>
+    <string name="live_crash">Crash (at the next frame)</string>
+    <string name="live_unsupported">Unsupported</string>
+    <string name="live_slow_release">Slow release (300 ms)</string>
+    <string name="live_ask_events">Ask for events (focused tile, now playing)</string>
 </resources>

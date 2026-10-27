@@ -1,7 +1,9 @@
 package ca.dstudio.atvlauncher.wallpaper.api;
 
+import android.view.Surface;
 import ca.dstudio.atvlauncher.wallpaper.api.IWallpaperHost;
 import ca.dstudio.atvlauncher.wallpaper.api.WallpaperEnvironment;
+import ca.dstudio.atvlauncher.wallpaper.api.WallpaperEvent;
 
 /**
  * Launcher -> plugin. Implemented by WallpaperProviderService; a plugin APK never writes this
@@ -35,4 +37,36 @@ oneway interface IWallpaperProvider {
 
     /** The plugin was switched off, or the launcher let it go. The host is dead after this. */
     void detach();
+
+    // 2.1: the surface kind and events. Appended after detach(); see WallpaperContract's rules.
+
+    /**
+     * Surface kind: a surface to draw into, width x height pixels, named by surfaceId - a new id
+     * for every attach. Answer IWallpaperHost.surfaceDrawn(surfaceId) after the first frame, within
+     * SURFACE_FIRST_FRAME_MS (SURFACE_FIRST_FRAME_COLD_MS for the first attach after attach()), or
+     * IWallpaperHost.surfaceFailed(surfaceId, code). Draw at the size given: never change the
+     * buffers' geometry, never call Surface.setFrameRate.
+     */
+    void attachSurface(int surfaceId, in Surface surface, int width, int height);
+
+    /**
+     * Surface kind: stop drawing into surface surfaceId, release it (the EGL surface with it) and
+     * answer IWallpaperHost.surfaceReleased(surfaceId). An id that is not the current one is ignored.
+     */
+    void detachSurface(int surfaceId);
+
+    /**
+     * Whether the picture may move. false: hold the picture still; a change it was asked for (a
+     * setting) may still draw a frame. Motion starts off at attach(): the picture holds still until
+     * setMotion(true).
+     */
+    void setMotion(boolean allowed);
+
+    /**
+     * An event the plugin asked for with IWallpaperHost.wantEvents() (and declared in
+     * wallpaperEvents): the focused tile, or what is playing - nothing playing included. The latest of
+     * each comes after every wantEvents() and every attachSurface() while asked for, then each change.
+     * What it carries is WallpaperEvent's KDoc.
+     */
+    void event(in WallpaperEvent event);
 }

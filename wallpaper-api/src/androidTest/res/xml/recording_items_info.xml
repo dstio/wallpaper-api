@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- ItemsRecordingService: a plugin of the items kind. -->
+<wallpaper-provider
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    app:wallpaperLabel="Recording items"
+    app:wallpaperKind="items"
+    app:wallpaperTypes="image|color"
+    app:apiVersion="2" />

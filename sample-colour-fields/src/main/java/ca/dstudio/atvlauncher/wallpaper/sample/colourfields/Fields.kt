@@ -96,7 +96,45 @@ class ColourFieldsSettings(
     }
 }
 
-/** Draws one field and writes it as a PNG. */
+/**
+ * Colour Fields Live's test switches, debug builds only, in prefs [ColourFieldsSettings.FILE]: what the
+ * launcher's surface host is checked against. The service reads them when they apply.
+ */
+class LiveSettings(
+    /** Never draw, so never say drawn: the host's first-frame watchdog. Read at each attach. */
+    val neverDraw: Boolean,
+    /** Kill the process at the next frame: a plugin's binder dying while it holds a surface. */
+    val crash: Boolean,
+    /** Answer each surface with `surfaceFailed(SURFACE_UNSUPPORTED)`. Read at each attach. */
+    val unsupported: Boolean,
+    /** Answer a detach 300 ms late, past the host's bounded wait. Read at each detach. */
+    val slowRelease: Boolean,
+    /**
+     * Ask for both events it declares at each attach and log every one that comes: a launcher sends a
+     * plugin of another package none. Read at each attach.
+     */
+    val askEvents: Boolean = false,
+) {
+    companion object {
+        const val KEY_NEVER_DRAW = "live-never-draw"
+        const val KEY_CRASH = "live-crash"
+        const val KEY_UNSUPPORTED = "live-unsupported"
+        const val KEY_SLOW_RELEASE = "live-slow-release"
+        const val KEY_ASK_EVENTS = "live-ask-events"
+
+        fun read(context: Context): LiveSettings = ColourFieldsSettings.prefs(context).let {
+            LiveSettings(
+                neverDraw = BuildConfig.DEBUG && it.getBoolean(KEY_NEVER_DRAW, false),
+                crash = BuildConfig.DEBUG && it.getBoolean(KEY_CRASH, false),
+                unsupported = BuildConfig.DEBUG && it.getBoolean(KEY_UNSUPPORTED, false),
+                slowRelease = BuildConfig.DEBUG && it.getBoolean(KEY_SLOW_RELEASE, false),
+                askEvents = BuildConfig.DEBUG && it.getBoolean(KEY_ASK_EVENTS, false),
+            )
+        }
+    }
+}
+
+/** Draws one field and writes it as a PNG; [drawGradient] is the field itself, which Colour Fields Live turns. */
 object FieldRenderer {
 
     /**
@@ -106,19 +144,7 @@ object FieldRenderer {
     fun write(file: File, palette: Palette, n: Int, width: Int, height: Int) {
         val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
         try {
-            val radians = Math.toRadians(palette.angle(n).toDouble())
-            val dx = cos(radians).toFloat()
-            val dy = sin(radians).toFloat()
-            val half = (abs(width * dx) + abs(height * dy)) / 2f
-            val cx = width / 2f
-            val cy = height / 2f
-            val paint = Paint().apply {
-                shader = LinearGradient(
-                    cx - dx * half, cy - dy * half, cx + dx * half, cy + dy * half,
-                    palette.stops(n), null, Shader.TileMode.CLAMP,
-                )
-            }
-            Canvas(bitmap).drawPaint(paint)
+            drawGradient(Canvas(bitmap), width, height, palette.angle(n), palette.stops(n))
             val tmp = File(file.parentFile, file.name + ".tmp")
             tmp.outputStream().use { bitmap.compress(Bitmap.CompressFormat.PNG, 100, it) }
             if (!tmp.renameTo(file)) {
@@ -128,5 +154,23 @@ object FieldRenderer {
         } finally {
             bitmap.recycle()
         }
+    }
+
+    /**
+     * A linear gradient through the centre at [degrees] through [stops], spanning the whole
+     * [width] x [height] box: the first stop at one extreme corner, the last at the opposite one.
+     */
+    fun drawGradient(canvas: Canvas, width: Int, height: Int, degrees: Float, stops: IntArray, paint: Paint = Paint()) {
+        val radians = Math.toRadians(degrees.toDouble())
+        val dx = cos(radians).toFloat()
+        val dy = sin(radians).toFloat()
+        val half = (abs(width * dx) + abs(height * dy)) / 2f
+        val cx = width / 2f
+        val cy = height / 2f
+        paint.shader = LinearGradient(
+            cx - dx * half, cy - dy * half, cx + dx * half, cy + dy * half,
+            stops, null, Shader.TileMode.CLAMP,
+        )
+        canvas.drawPaint(paint)
     }
 }

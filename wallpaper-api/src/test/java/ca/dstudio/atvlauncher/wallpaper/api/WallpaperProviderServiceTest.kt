@@ -2,14 +2,16 @@ package ca.dstudio.atvlauncher.wallpaper.api
 
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
- * [WallpaperProviderService]'s two decisions, pure: who may call into the plugin ([callerAllowed],
- * which `guarded` hands the caller it read on the binder thread) and what `push` sends
- * ([cappedToMaxItems]).
+ * [WallpaperProviderService]'s decisions, pure: who may call into the plugin ([callerAllowed],
+ * which `guarded` hands the caller it read on the binder thread), what `push` sends
+ * ([cappedToMaxItems]) and which surface the plugin holds ([SurfaceSlot]). The service itself, on a
+ * device, is WallpaperProviderServiceDeviceTest (androidTest).
  */
 class WallpaperProviderServiceTest {
 
@@ -44,6 +46,48 @@ class WallpaperProviderServiceTest {
         assertEquals((1..WallpaperContract.MAX_ITEMS).map { "item-$it" }, sent.items.map { it.id })
         assertEquals(NEXT_REQUEST_MS, sent.nextRequestMs)
         assertEquals(WallpaperContract.MAX_ITEMS, cappedToMaxItems(batchOf(WallpaperContract.MAX_ITEMS + 1)).items.size)
+    }
+
+    @Test
+    fun `a surface is current from its attach until its detach`() {
+        val slot = SurfaceSlot()
+        assertNull(slot.current)
+        assertNull("nothing to end before the first", slot.attach(1))
+        assertEquals(1, slot.current)
+        assertTrue(slot.detach(1))
+        assertNull(slot.current)
+        assertFalse("a surface ends once", slot.detach(1))
+    }
+
+    @Test
+    fun `a call naming another id changes nothing`() {
+        val slot = SurfaceSlot()
+        slot.attach(2)
+        assertFalse(slot.detach(1))
+        assertFalse(slot.detach(3))
+        assertEquals(2, slot.current)
+        assertFalse("no surface, nothing to detach", SurfaceSlot().detach(2))
+    }
+
+    @Test
+    fun `a new surface ends the one it replaces`() {
+        val slot = SurfaceSlot()
+        slot.attach(1)
+        assertEquals(1, slot.attach(2))
+        assertEquals(2, slot.current)
+        assertFalse("the replaced id is stale now", slot.detach(1))
+        assertTrue(slot.detach(2))
+    }
+
+    @Test
+    fun `the end of the conversation ends the current surface, once`() {
+        val slot = SurfaceSlot()
+        assertNull("no surface, nothing to end", slot.end())
+        slot.attach(7)
+        assertEquals(7, slot.end())
+        assertNull(slot.current)
+        assertNull(slot.end())
+        assertFalse(slot.detach(7))
     }
 
     private fun batchOf(count: Int) = WallpaperBatch(

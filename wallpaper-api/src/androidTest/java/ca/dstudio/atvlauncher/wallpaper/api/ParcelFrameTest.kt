@@ -1,21 +1,30 @@
 package ca.dstudio.atvlauncher.wallpaper.api
 
+import android.graphics.Color
+import android.graphics.SurfaceTexture
 import android.os.BadParcelableException
 import android.os.Binder
+import android.os.Handler
+import android.os.HandlerThread
 import android.os.Parcel
 import android.os.Parcelable
 import android.system.Os
+import android.view.Surface
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import kotlinx.parcelize.parcelableCreator
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertSame
 import org.junit.Assert.assertThrows
+import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
 import java.io.File
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit.SECONDS
 
 /**
  * The wire format, on a real Parcel. A frame is written here by hand, as a newer version would
@@ -38,6 +47,15 @@ class ParcelFrameTest {
         sourceUrl = "https://example.com/warm",
     )
     private val colour = WallpaperItem("colour-1b2a55", "#1B2A55", type = WallpaperContract.TYPE_COLOR)
+    private val nowPlaying = WallpaperEvent(
+        type = WallpaperContract.EVENT_NOW_PLAYING,
+        packageName = "com.example.music",
+        title = "Blue in Green",
+        artist = "Miles Davis",
+        album = "Kind of Blue",
+        playing = true,
+        colors = intArrayOf(0xFF3366CC.toInt(), 0xFF112233.toInt(), 0x80FFFFFF.toInt()),
+    )
 
     @After
     fun recycle() = parcel.recycle()
@@ -70,6 +88,128 @@ class ParcelFrameTest {
         val batch = WallpaperBatch(listOf(picture, colour), 21_600_000L)
         assertEquals(batch, roundTrip(batch))
         assertEquals(WallpaperBatch(emptyList()), roundTrip(WallpaperBatch(emptyList())))
+        assertEquals(nowPlaying, roundTrip(nowPlaying))
+        val focused = WallpaperEvent(WallpaperContract.EVENT_FOCUSED_TILE)
+        assertEquals(focused, roundTrip(focused))
+        val moving = WallpaperEvent(WallpaperContract.EVENT_HOME_MOVING, moving = true)
+        assertEquals(moving, roundTrip(moving))
+    }
+
+    /** An event's frame as a reader of any version sees it: its fields in order, the colours counted, then moving. */
+    @Test
+    fun anEventIsItsFieldsInAFrame() {
+        frame {
+            writeString(WallpaperContract.EVENT_NOW_PLAYING); writeString("com.example.music")
+            writeString("Blue in Green"); writeString("Miles Davis"); writeString("Kind of Blue")
+            writeInt(1)
+            writeInt(3); writeInt(0xFF3366CC.toInt()); writeInt(0xFF112233.toInt()); writeInt(0x80FFFFFF.toInt())
+            writeInt(0)
+        }
+        parcel.setDataPosition(0)
+        assertEquals(nowPlaying, parcelableCreator<WallpaperEvent>().createFromParcel(parcel))
+        assertEquals("read to the end of the frame", parcel.dataSize(), parcel.dataPosition())
+    }
+
+    /** Home moving's frame: the type, no strings, not playing, no colours, then moving. */
+    @Test
+    fun homeMovingIsMovingAfterTheColours() {
+        frame {
+            writeString(WallpaperContract.EVENT_HOME_MOVING); writeString(null)
+            writeString(null); writeString(null); writeString(null)
+            writeInt(0)
+            writeInt(0)
+            writeInt(1)
+        }
+        parcel.setDataPosition(0)
+        assertEquals(
+            WallpaperEvent(WallpaperContract.EVENT_HOME_MOVING, moving = true),
+            parcelableCreator<WallpaperEvent>().createFromParcel(parcel),
+        )
+        assertEquals("read to the end of the frame", parcel.dataSize(), parcel.dataPosition())
+    }
+
+    /** An event whose frame ends at its colours: moving reads false, and what follows it still reads. */
+    @Test
+    fun anOlderEventReadsStill() {
+        parcel.writeInt(1) // writeTypedObject's "not null"
+        frame {
+            writeString(WallpaperContract.EVENT_FOCUSED_TILE); writeString(null)
+            writeString(null); writeString(null); writeString(null)
+            writeInt(0)
+            writeInt(1); writeInt(0xFF884422.toInt())
+        }
+        parcel.writeInt(0x5EED)
+        parcel.setDataPosition(0)
+        assertEquals(
+            WallpaperEvent(WallpaperContract.EVENT_FOCUSED_TILE, colors = intArrayOf(0xFF884422.toInt())),
+            parcel.readTypedObject(parcelableCreator<WallpaperEvent>()),
+        )
+        assertEquals(0x5EED, parcel.readInt())
+    }
+
+    /** A newer launcher's event, two fields longer than moving: they are skipped, and what follows it still reads. */
+    @Test
+    fun aNewerEventReadsHere() {
+        parcel.writeInt(1) // writeTypedObject's "not null"
+        frame {
+            writeString(WallpaperContract.EVENT_FOCUSED_TILE); writeString("com.example.video")
+            writeString("Films"); writeString(null); writeString(null)
+            writeInt(0)
+            writeInt(1); writeInt(0xFF884422.toInt())
+            writeInt(0)
+            writeLong(42L); writeString("a field from a later version")
+        }
+        parcel.writeInt(0x5EED)
+        parcel.setDataPosition(0)
+        assertEquals(
+            WallpaperEvent(
+                type = WallpaperContract.EVENT_FOCUSED_TILE,
+                packageName = "com.example.video",
+                title = "Films",
+                colors = intArrayOf(0xFF884422.toInt()),
+            ),
+            parcel.readTypedObject(parcelableCreator<WallpaperEvent>()),
+        )
+        assertEquals(0x5EED, parcel.readInt())
+    }
+
+    /**
+     * As AIDL lays out attachSurface(): an id, the surface, the size. The copy read back is a surface
+     * a plugin can draw into, and the ints after it read right.
+     */
+    @Test
+    fun aSurfaceTravelsAmongTheIntsAndCanBeDrawnInto() {
+        val looper = HandlerThread("parcel-frame-test").apply { start() }
+        val texture = SurfaceTexture(0)
+        val original = Surface(texture)
+        val frame = CountDownLatch(1)
+        texture.setOnFrameAvailableListener({ frame.countDown() }, Handler(looper.looper))
+        try {
+            parcel.writeInt(7)
+            parcel.writeTypedObject(original, 0)
+            parcel.writeInt(1280)
+            parcel.writeInt(720)
+            parcel.setDataPosition(0)
+            assertEquals(7, parcel.readInt())
+            val read: Surface? = parcel.readTypedObject(Surface.CREATOR)
+            assertNotNull(read)
+            val copy = read!!
+            assertEquals(1280, parcel.readInt())
+            assertEquals(720, parcel.readInt())
+            assertTrue("the original keeps its surface: written with flags 0", original.isValid)
+            assertTrue(copy.isValid)
+
+            texture.setDefaultBufferSize(64, 36)
+            val canvas = copy.lockCanvas(null)
+            canvas.drawColor(Color.MAGENTA)
+            copy.unlockCanvasAndPost(canvas)
+            copy.release()
+            assertTrue("a frame drawn on the copy reaches the consumer", frame.await(5, SECONDS))
+        } finally {
+            original.release()
+            texture.release()
+            looper.quitSafely()
+        }
     }
 
     /** As AIDL lays out attach(): the environment, then the host binder. */
@@ -134,6 +274,17 @@ class ParcelFrameTest {
             writeInt(8); writeInt(1920); writeInt(1080); writeInt(320); writeString("en-CA"); writeInt(2)
         }
         refused(parcelableCreator<WallpaperBatch>()) { frame { writeInt(1_000_000); writeLong(0L) } }
+        refused(parcelableCreator<WallpaperEvent>()) { // more colours than the frame can hold
+            frame {
+                writeString(WallpaperContract.EVENT_NOW_PLAYING); writeString(null); writeString(null)
+                writeString(null); writeString(null); writeInt(1)
+                writeInt(1_000_000); writeInt(0xFF3366CC.toInt())
+            }
+        }
+        refused(parcelableCreator<WallpaperEvent>()) { // claims 8 bytes and holds more fields than that
+            writeInt(8); writeString(WallpaperContract.EVENT_NOW_PLAYING); writeString(null); writeString(null)
+            writeString(null); writeString(null); writeInt(0); writeInt(0)
+        }
     }
 
     private fun refused(creator: Parcelable.Creator<*>, write: Parcel.() -> Unit) {

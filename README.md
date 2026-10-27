@@ -2,15 +2,18 @@
 
 A small Android library for writing **wallpaper plugins** for ATV Launcher: apps that hand the
 launcher pictures, which it shows on the home screen with its own timing, transitions and scale
-modes. A plugin decides *what* to show; the launcher decides *when* and *how*.
+modes. A plugin decides *what* to show; the launcher decides *when* and *how*. From 2.1 a plugin can
+also draw the wallpaper itself, on a surface the launcher lends it ([the surface kind](#the-surface-kind)),
+and hear what happens on the home screen ([events](#events)).
 
 The protocol is a bound service with one-way AIDL calls in both directions. This library holds the
 contract, a base service that does the binding and caller checks for you, and a read-only content
 provider for serving your pictures.
 
 - **Library:** `wallpaper-api/`
-- **Sample plugin:** `sample-colour-fields/` - Colour Fields, soft gradients drawn on the device
-- **Protocol version:** 2 (`WallpaperContract.API_VERSION`)
+- **Sample plugins:** `sample-colour-fields/` - Colour Fields, soft gradients drawn on the device and
+  handed over as pictures, and Colour Fields Live, a gradient that turns slowly, drawn on a surface
+- **Protocol version:** 2 (`WallpaperContract.API_VERSION`); 2.1 adds to it and a plugin still declares 2
 - **minSdk:** 23
 
 ## Add it
@@ -31,7 +34,7 @@ In your app's `build.gradle`:
 
 ```groovy
 dependencies {
-    implementation 'com.github.dstio:wallpaper-api:2.0.2'
+    implementation 'com.github.dstio:wallpaper-api:2.1.0'
 }
 ```
 
@@ -111,9 +114,9 @@ your pictures.
 | `wallpaperDescription` | One line under the name | none |
 | `wallpaperSettings` | Fully-qualified class of an **exported** settings activity | none |
 | `wallpaperPreview` | A 16:9 drawable, 960 x 540, opaque, square corners | none |
-| `wallpaperKind` | `items` (you hand pictures, the launcher draws them) | `items` |
-| `wallpaperTypes` | `image`, `color`, `video`, combined with `\|` | `image` |
-| `wallpaperEvents` | `focusedTile`, `nowPlaying` - declared now, delivered by a later version | none |
+| `wallpaperKind` | `items` (you hand pictures, the launcher draws them) or `surface` (you draw, from 2.1) | `items` |
+| `wallpaperTypes` | `image`, `color`, `video`, combined with `\|`; an `items` plugin's only | `image` |
+| `wallpaperEvents` | The [events](#events) you may ask for: `focusedTile`, `nowPlaying`, `homeMoving`, combined with `\|` | none |
 | `refreshIntervalMs` | First interval the launcher asks again at; below 60000 is raised to it, 0 is never on a timer | `0` |
 | `apiVersion` | The protocol version you built against | `2` |
 
@@ -139,12 +142,94 @@ your pictures.
 - **Feedback**: `onShown(itemId)` when a picture goes on screen, `onFailed(itemId, why)` with
   `FAIL_UNREADABLE`, `FAIL_TOO_SMALL` or `FAIL_UNSUPPORTED`.
 
-**Threading.** Every callback runs on the main thread. Do slow work elsewhere; `push` and
-`invalidate` are safe from any thread.
+**Threading.** Every callback runs on the main thread. Do slow work elsewhere; `push`,
+`invalidate`, `wantEvents` and the `surface...` calls are safe from any thread.
 
 **Compatibility.** The AIDL interfaces only ever gain methods at their end, and every parcelable only
 gains fields at its end, travelling with its size, so a plugin built against this version keeps
 working with newer launchers and the reverse.
+
+## The surface kind
+
+From 2.1 a plugin can draw its wallpaper itself. It declares `app:wallpaperKind="surface"`; the
+launcher lends it a surface the size of the screen and shows what it draws there.
+
+```kotlin
+class MyLiveService : WallpaperProviderService() {
+
+    // A surface plugin is never asked for pictures.
+    override fun onRequest(reason: Int) {}
+
+    override fun onSurfaceAttached(surfaceId: Int, surface: Surface, width: Int, height: Int) {
+        // Draw on a thread of your own; after the first frame, call surfaceDrawn(surfaceId).
+        renderer.start(surfaceId, surface, width, height)
+    }
+
+    override fun onSurfaceDetached(surfaceId: Int) {
+        // Stop, release the surface, then call surfaceReleased(surfaceId) from the thread that released it.
+        renderer.stop()
+    }
+
+    override fun onMotionChanged(allowed: Boolean) = renderer.setMoving(allowed)
+}
+```
+
+- **A surface plugin is never sent `onRequest`**, and its pushes are dropped. It declares no
+  `wallpaperTypes` and no `refreshIntervalMs`.
+- **Each surface has an id.** A call naming an id that is not the current one is ignored on both
+  sides. The base service ends one surface (`onSurfaceDetached`) before it lends the next, before
+  `onDetach` and before `onAttach` again, so you never hold two.
+- **Say when the first frame is drawn**: `surfaceDrawn(id)` within 3 seconds of `onSurfaceAttached`,
+  or 10 seconds for the first surface after `onAttach` - a cold process, shaders compiling
+  (`SURFACE_FIRST_FRAME_MS`, `SURFACE_FIRST_FRAME_COLD_MS`).
+- **On `onSurfaceDetached(id)`** stop drawing, release your EGL surface and the `Surface`, and call
+  `surfaceReleased(id)`. A swap that fails at any time means the surface is gone: stop and wait for
+  the next one.
+- **Draw at the size given.** Never change the buffers' geometry and never call
+  `Surface.setFrameRate`: on a TV a frame-rate vote can switch the HDMI mode and blank the screen.
+- **Motion starts off.** Hold the picture still until `onMotionChanged(true)`, and whenever it says
+  `false`; a change the user asked for (a setting) may still draw a frame.
+- **A plugin that cannot draw** calls `surfaceFailed(id, SURFACE_UNSUPPORTED)` (this device cannot
+  draw it) or `surfaceFailed(id, SURFACE_ERROR)`.
+
+Colour Fields Live (`ColourFieldsLiveService` in the sample) is a complete one, drawn with
+`Surface.lockCanvas`.
+
+## Events
+
+From 2.1 a plugin can hear what happens on the home screen, to colour or pace what it shows. Declare
+the events in `wallpaperEvents`, ask for the ones you need now with `wantEvents(flags)` and hear them
+in `onEvent`:
+
+```kotlin
+override fun onAttach(env: WallpaperEnvironment) {
+    wantEvents(WallpaperProviderInfo.FLAG_EVENT_NOW_PLAYING or WallpaperProviderInfo.FLAG_EVENT_HOME_MOVING)
+}
+
+override fun onEvent(event: WallpaperEvent) {
+    when (event.type) {
+        WallpaperContract.EVENT_NOW_PLAYING -> palette.use(event.colors)
+        WallpaperContract.EVENT_HOME_MOVING -> renderer.setLight(event.moving)
+    }
+}
+```
+
+| Event | Flag | What it carries |
+|---|---|---|
+| `focusedTile` | `FLAG_EVENT_FOCUSED_TILE` | Once the cursor rests on a tile: `colors[0]`, the tile's accent as the launcher's focus ring wears it, or `WHITE_LIGHT` for a tile with no colour of its own |
+| `nowPlaying` | `FLAG_EVENT_NOW_PLAYING` | `playing`, the app, title, artist and album, and seven colours from the cover in a fixed order (`WallpaperEvent`); `playing` false when nothing plays |
+| `homeMoving` | `FLAG_EVENT_HOME_MOVING` | `moving` true as the user moves on the home screen - the cursor, a scroll, the menu - and false once it has been still for a second (`HOME_STILL_MS`) |
+
+- **Any kind of plugin may ask.** An `onAttach` is a reset: you hear nothing until you ask, so ask
+  there, and again whenever what you need changes (`0` asks for none). A flag you did not declare is
+  ignored.
+- **Each ask is answered with the latest of every event asked for**, and so is each surface lent while
+  you have asked; after that an event comes when it changes.
+- **While the home screen moves it draws every frame and needs the GPU.** A surface plugin draws
+  lighter then - a steady lower rate, never in starts and stops - and at its full rate once
+  `moving` is false.
+- **A launcher may send a plugin none.** ATV Launcher sends events only to its own plugins for now;
+  another plugin hears none until a later version lets the user allow it.
 
 ## Build the project
 

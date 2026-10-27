@@ -54,13 +54,14 @@ class SettingsActivity : Activity() {
         findViewById<View>(R.id.done).setOnClickListener { finish() }
         findViewById<View>(chosen).requestFocus()
     }
+}
 
-    private fun bindSwitch(id: Int, key: String, on: Boolean) {
-        findViewById<CompoundButton>(id).apply {
-            isChecked = on
-            setOnCheckedChangeListener { _, checked ->
-                ColourFieldsSettings.prefs(context).edit().putBoolean(key, checked).apply()
-            }
+/** Shows [on] on switch [id] and saves each change to [key] in the settings' prefs, as it is made. */
+internal fun Activity.bindSwitch(id: Int, key: String, on: Boolean) {
+    findViewById<CompoundButton>(id).apply {
+        isChecked = on
+        setOnCheckedChangeListener { _, checked ->
+            ColourFieldsSettings.prefs(context).edit().putBoolean(key, checked).apply()
         }
     }
 }

@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SurfaceRecordingService: a plugin of the surface kind, which may ask for both events. -->
+<wallpaper-provider
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    app:wallpaperLabel="Recording surface"
+    app:wallpaperKind="surface"
+    app:wallpaperEvents="focusedTile|nowPlaying"
+    app:apiVersion="2" />
