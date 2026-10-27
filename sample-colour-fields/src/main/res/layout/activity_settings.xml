@@ -1,0 +1,130 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:fitsSystemWindows="true">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:paddingStart="48dp"
+        android:paddingTop="27dp"
+        android:paddingEnd="48dp"
+        android:paddingBottom="27dp">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/app_name"
+            android:textAppearance="?android:attr/textAppearanceLarge" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:text="@string/settings_note"
+            android:textAppearance="?android:attr/textAppearanceSmall" />
+
+        <TextView
+            style="@style/SettingsLabel"
+            android:text="@string/settings_palette" />
+
+        <RadioGroup
+            android:id="@+id/palette"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal">
+
+            <RadioButton
+                android:id="@+id/palette_warm"
+                style="@style/SettingsChoice"
+                android:text="@string/palette_warm" />
+
+            <RadioButton
+                android:id="@+id/palette_cool"
+                style="@style/SettingsChoice"
+                android:text="@string/palette_cool" />
+
+            <RadioButton
+                android:id="@+id/palette_night"
+                style="@style/SettingsChoice"
+                android:nextFocusRight="@id/palette_night"
+                android:text="@string/palette_night" />
+        </RadioGroup>
+
+        <TextView
+            style="@style/SettingsLabel"
+            android:text="@string/settings_count" />
+
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <Button
+                android:id="@+id/fewer"
+                style="@style/SettingsButton"
+                android:layout_width="64dp"
+                android:contentDescription="@string/settings_fewer"
+                android:text="-" />
+
+            <TextView
+                android:id="@+id/count"
+                android:layout_width="56dp"
+                android:layout_height="wrap_content"
+                android:gravity="center"
+                android:textAppearance="?android:attr/textAppearanceMedium"
+                tools:text="6" />
+
+            <!-- The end of a row keeps RIGHT; FocusFinder would jump to the row above. -->
+            <Button
+                android:id="@+id/more"
+                style="@style/SettingsButton"
+                android:layout_width="64dp"
+                android:contentDescription="@string/settings_more"
+                android:nextFocusRight="@id/more"
+                android:text="+" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/testing"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:visibility="gone"
+            tools:visibility="visible">
+
+            <TextView
+                style="@style/SettingsLabel"
+                android:text="@string/settings_testing" />
+
+            <Switch
+                android:id="@+id/slow"
+                android:layout_width="320dp"
+                android:layout_height="wrap_content"
+                android:nextFocusRight="@id/slow"
+                android:padding="8dp"
+                android:text="@string/settings_slow" />
+
+            <Switch
+                android:id="@+id/silent"
+                android:layout_width="320dp"
+                android:layout_height="wrap_content"
+                android:nextFocusRight="@id/silent"
+                android:padding="8dp"
+                android:text="@string/settings_silent" />
+        </LinearLayout>
+
+        <Button
+            android:id="@+id/done"
+            style="@style/SettingsButton"
+            android:layout_width="wrap_content"
+            android:layout_marginTop="24dp"
+            android:minWidth="160dp"
+            android:nextFocusRight="@id/done"
+            android:text="@string/settings_done" />
+    </LinearLayout>
+</ScrollView>

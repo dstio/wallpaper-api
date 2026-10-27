@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Colour Fields</string>
+    <string name="wallpaper_description">Soft gradients made on this device</string>
+
+    <string name="settings_note">The launcher picks up a change when this screen closes.</string>
+    <string name="settings_palette">Palette</string>
+    <string name="palette_warm">Warm</string>
+    <string name="palette_cool">Cool</string>
+    <string name="palette_night">Night</string>
+    <string name="settings_count">Pictures</string>
+    <string name="settings_fewer">Fewer pictures</string>
+    <string name="settings_more">More pictures</string>
+    <string name="settings_done">Done</string>
+
+    <!-- Debug builds only: switches for testing how a launcher handles a slow or silent plugin. -->
+    <string name="settings_testing">Testing</string>
+    <string name="settings_slow">Answer slowly (5 s)</string>
+    <string name="settings_silent">Do not answer</string>
+
+    <string name="colour_title">Deep blue</string>
+</resources>

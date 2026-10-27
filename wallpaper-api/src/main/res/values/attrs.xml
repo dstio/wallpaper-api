@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <!--
+        Attributes of the wallpaper_info.xml resource file each wallpaper plugin declares.
+
+        A plugin APK declares a service with:
+          <meta-data android:name="ca.dstudio.atvlauncher.wallpaper.INFO"
+                     android:resource="@xml/wallpaper_info"/>
+
+        and that XML, root element <wallpaper-provider> with these attributes in the res-auto
+        namespace, describes the plugin to ATV Launcher:
+
+          wallpaperLabel        - human-readable name shown in the launcher's list of plugins.
+          wallpaperDescription  - short description shown with the name.
+          wallpaperSettings     - fully-qualified class name of a settings Activity, which must be
+                                  exported. Omit if the plugin has no settings.
+          wallpaperPreview      - drawable resource inside the plugin APK used as its picture in
+                                  the list: 16:9, 960 x 540, opaque, square corners. Omit if none.
+          wallpaperKind         - items (default): the plugin hands pictures and the launcher draws
+                                  them. surface: the plugin draws into a launcher surface - served
+                                  from a later version, not by 2.0.
+                                  Values match WallpaperProviderInfo.KIND_ITEMS / KIND_SURFACE.
+          wallpaperTypes        - what the items are: image, color, video, combined with "|".
+                                  Default image. A plugin that sends only videos is listed dimmed
+                                  until the launcher takes videos. Values match
+                                  WallpaperProviderInfo.FLAG_IMAGE / FLAG_COLOR / FLAG_VIDEO.
+          wallpaperEvents       - what the plugin asks to hear: focusedTile, nowPlaying, combined
+                                  with "|". Declared from 2.0, sent from a later version; the user
+                                  is asked before any is sent.
+          refreshIntervalMs     - the first interval at which the launcher asks again, in ms. Values
+                                  below WallpaperContract.MIN_REQUEST_INTERVAL_MS (60000) are raised
+                                  to it. Omit or set to 0 to be asked only on start, when settings
+                                  close and on invalidate. WallpaperBatch.nextRequestMs changes it.
+          apiVersion            - WallpaperContract.API_VERSION the plugin was built against. The
+                                  launcher ignores a plugin from a newer protocol than it speaks.
+    -->
+    <declare-styleable name="WallpaperProvider">
+        <attr name="wallpaperLabel"       format="string|reference"/>
+        <attr name="wallpaperDescription" format="string|reference"/>
+        <attr name="wallpaperSettings"    format="string"/>
+        <attr name="wallpaperPreview"     format="reference"/>
+        <attr name="wallpaperKind"        format="enum">
+            <enum name="items"   value="0"/>
+            <enum name="surface" value="1"/>
+        </attr>
+        <attr name="wallpaperTypes"       format="flags">
+            <flag name="image" value="1"/>
+            <flag name="color" value="2"/>
+            <flag name="video" value="4"/>
+        </attr>
+        <attr name="wallpaperEvents"      format="flags">
+            <flag name="focusedTile" value="1"/>
+            <flag name="nowPlaying"  value="2"/>
+        </attr>
+        <attr name="refreshIntervalMs"    format="integer"/>
+        <attr name="apiVersion"           format="integer"/>
+    </declare-styleable>
+
+</resources>

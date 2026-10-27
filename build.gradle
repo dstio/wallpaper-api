@@ -1,0 +1,30 @@
+// Top-level build file for the standalone ATV Launcher Wallpaper API library.
+
+buildscript {
+    ext {
+        ANDROID_MIN_SDK_VERSION         = 23
+        ANDROID_COMPILE_SDK_VERSION     = 36
+        KOTLIN_VERSION                  = '2.3.10'
+        WALLPAPER_API_VERSION           = '2.0.1'
+    }
+
+    repositories {
+        google()
+        mavenCentral()
+    }
+    dependencies {
+        classpath 'com.android.tools.build:gradle:9.0.1'
+        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$KOTLIN_VERSION"
+    }
+}
+
+allprojects {
+    repositories {
+        google()
+        mavenCentral()
+    }
+}
+
+task clean(type: Delete) {
+    delete rootProject.buildDir
+}

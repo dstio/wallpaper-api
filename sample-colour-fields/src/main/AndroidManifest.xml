@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <application
+        android:allowBackup="false"
+        android:icon="@drawable/ic_colour_fields"
+        android:label="@string/app_name"
+        android:supportsRtl="true"
+        android:theme="@style/ColourFieldsTheme">
+
+        <!-- Started by the launcher (wallpaperSettings), so exported. -->
+        <activity
+            android:name=".SettingsActivity"
+            android:exported="true" />
+
+        <!-- Only the launcher, which holds BIND_WALLPAPER, can bind it. -->
+        <service
+            android:name=".ColourFieldsService"
+            android:exported="true"
+            android:permission="ca.dstudio.atvlauncher.permission.BIND_WALLPAPER">
+            <intent-filter>
+                <action android:name="ca.dstudio.atvlauncher.wallpaper.SERVICE" />
+            </intent-filter>
+            <meta-data
+                android:name="ca.dstudio.atvlauncher.wallpaper.INFO"
+                android:resource="@xml/wallpaper_info" />
+        </service>
+
+        <!-- Only the launcher can read the pictures; no grants (WallpaperFileProvider). -->
+        <provider
+            android:name=".ColourFieldsFiles"
+            android:authorities="${applicationId}.wallpapers"
+            android:exported="true"
+            android:readPermission="ca.dstudio.atvlauncher.permission.BIND_WALLPAPER" />
+    </application>
+
+</manifest>

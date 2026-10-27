@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<wallpaper-provider
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    app:wallpaperLabel="@string/app_name"
+    app:wallpaperDescription="@string/wallpaper_description"
+    app:wallpaperSettings="ca.dstudio.atvlauncher.wallpaper.sample.colourfields.SettingsActivity"
+    app:wallpaperPreview="@drawable/wallpaper_preview"
+    app:wallpaperKind="items"
+    app:wallpaperTypes="image|color"
+    app:refreshIntervalMs="21600000"
+    app:apiVersion="2" />

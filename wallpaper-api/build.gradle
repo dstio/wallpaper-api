@@ -1,0 +1,54 @@
+plugins {
+    id 'com.android.library'
+    id 'kotlin-parcelize'
+    id 'maven-publish'
+}
+
+android {
+    compileSdkVersion ANDROID_COMPILE_SDK_VERSION
+    defaultConfig {
+        minSdkVersion ANDROID_MIN_SDK_VERSION
+        // The wire format (ParcelFrame) needs a real Parcel, which only a device has.
+        testInstrumentationRunner 'androidx.test.runner.AndroidJUnitRunner'
+    }
+    namespace 'ca.dstudio.atvlauncher.wallpaper.api'
+    buildFeatures {
+        // AGP 9 defaults it off; without it the .aidl files are silently ignored.
+        aidl = true
+    }
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+    kotlin {
+        jvmToolchain(17)
+    }
+
+    publishing {
+        singleVariant('release') {
+            withSourcesJar()
+        }
+    }
+}
+
+dependencies {
+    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk7:$KOTLIN_VERSION"
+
+    testImplementation 'junit:junit:4.13.2'
+
+    androidTestImplementation 'androidx.test:runner:1.6.2'
+    androidTestImplementation 'androidx.test.ext:junit:1.2.1'
+}
+
+afterEvaluate {
+    publishing {
+        publications {
+            release(MavenPublication) {
+                from components.release
+                groupId    = 'ca.dstudio.atvlauncher'
+                artifactId = 'wallpaper-api'
+                version    = WALLPAPER_API_VERSION
+            }
+        }
+    }
+}
