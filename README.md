@@ -31,7 +31,7 @@ In your app's `build.gradle`:
 
 ```groovy
 dependencies {
-    implementation 'com.github.dstio.wallpaper-api:wallpaper-api:2.0.1'
+    implementation 'com.github.dstio:wallpaper-api:2.0.1'
 }
 ```
 
